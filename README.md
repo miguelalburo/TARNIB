@@ -1,11 +1,38 @@
-Miguel TARNIB brothaa
+# T.A.R.N.I.B Plan
 
-Dylan TARNIB brothaa
+## Day 1 
+- Create plan
+- Initial Setup
 
+## Day 2
+- Start & Finish: Data Preprocessing
+	- ICD 9 to 10 Conversion
+	- Manipulate and Merge Patient Data
+- Create a Training and Testing set
+- Exploratory Data Analysis I
 
-zubair hi guys
+## Day 3
+- Exploratory Data Analysis II
+	- Clustering
+- Model Development
+	- Research
+	- Code
 
-Haleem TARNIB brothaa
+## Day 4
+- Model Development
+	- Research
+	- Code
 
+## Day 5
+- Model Evaluation
+	- ROC, AUC, precision, recall, accuracy, F1
 
-hello guys !!!!!!!!!!!!
+## Day 6
+- Powerpoint Making
+
+## Day 7
+- Powerpoint Making
+
+## Day 8
+- 
+
