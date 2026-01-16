@@ -20,8 +20,8 @@
 
 ## Day 4
 - Model Development
-	- Research
-	- Code
+	- Research Model
+	- Code on Python
 
 ## Day 5
 - Model Evaluation
@@ -34,5 +34,5 @@
 - Powerpoint Making
 
 ## Day 8
-- 
+- Complete
 
