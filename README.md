@@ -1,38 +1,15 @@
-# T.A.R.N.I.B Plan
+# TARNIB's Predictive Modeling for Clinical Outcomes
 
-## Day 1 
-- Create plan
-- Initial Setup
+Hi 👋,
 
-## Day 2
-- Start & Finish: Data Preprocessing
-	- ICD 9 to 10 Conversion
-	- Manipulate and Merge Patient Data
-- Create a Training and Testing set
-- Exploratory Data Analysis I
+We are the *Team for Advanced Research in Neural Inference for Biostatistics* a.k.a **TARNIB**, a group of postgraduate bioinformatics students at the University of Birmingham. Our project focuses on building and comparing ML to predict patient in-hospital mortality risk and length of stay using synthetic clinical data inspired by the [MIMIC-III/IV datasets](https://physionet.org/content/mimiciv/3.1/). We also aim to investigate whether ethnic group impacts model performance.
 
-## Day 3
-- Exploratory Data Analysis II
-	- Clustering
-- Model Development
-	- Research
-	- Code
+## 👥 TARNIB Members
 
-## Day 4
-- Model Development
-	- Research Model
-	- Code on Python
+- Abd Abboud
 
-## Day 5
-- Model Evaluation
-	- ROC, AUC, precision, recall, accuracy, F1
+- Zubair Khan
 
-## Day 6
-- Powerpoint Making
+- Dylan le
 
-## Day 7
-- Powerpoint Making
-
-## Day 8
-- Complete
-
+- Miguel Alburo
