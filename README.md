@@ -6,7 +6,7 @@ We are the *Team for Advanced Research in Neural Inference for Biostatistics* a.
 
 ## 👥 TARNIB Members
 
-- Abd Abboud
+- Abd Alhalem Abboud
 
 - Zubair Khan
 
