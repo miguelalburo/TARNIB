@@ -32,8 +32,12 @@ long <- long %>%
   mutate(across(all_of(categories), 
                 ~ if_else(is.na(.) | tolower(.) %in% unknowns,
                           paste0("Unknown_", cur_column()),.))) %>%
-  mutate(deathtime = ifelse("", NA, ymd_hms(deathtime)),
-         dod = ifelse("", NA, ymd(dod)))
+  mutate(deathtime = case_when(
+             deathtime == "" ~ NA,
+             TRUE ~ deathtime),
+         dod = case_when(
+             dod == "" ~ NA,
+             TRUE ~ dod))
 
 diagnoses <- diagnoses %>%
   mutate(ccs_code = case_when(
@@ -81,7 +85,7 @@ long <- bin_rare_categories(long, categories, threshold)
 
 # Calculating Patient's Current Age
 long <- long %>%
-  mutate(age = anchor_year - year(admittime) + anchor_age)
+  mutate(age = year(admittime) - year(anchor_year) + anchor_age)
 
 # Calculating Admissions Length of Stay Features
 long <- long %>%
