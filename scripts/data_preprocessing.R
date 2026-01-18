@@ -2,6 +2,7 @@ rm(list = ls())
 
 library(tidyverse)
 library(fastDummies)
+library(caret)
 
 set.seed(67)
 
@@ -154,13 +155,22 @@ wide <- long %>%
 wide <- wide %>%
   right_join(ccs_embeddings, by = "hadm_id")
 
+######## TRAIN/TEST SPLIT AND SAVE  #########
 
-# Initial Feature Selection
+# Removing Features
 features_to_remove <- c(
-  "subject_id", "admittime", "dischtime", "edregtime", "edouttime", "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id"
+  "subject_id", "admittime", "dischtime", "edregtime", "edouttime",
+  "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id", "dod"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
 
+# Stratified 80/20 RAIN/TEST based on hospital_expire_flag
+n <- nrow(wide)
+train_idx <- createDataPartition(wide$hospital_expire_flag, p = 0.8, list = FALSE)
+train_data <- wide[train_idx, ]
+test_data  <- wide[-train_idx, ]
 
-write_csv(wide, file = "data/wide.csv")
+# Writing to CSV file
+write_csv(train_data, file = "data/train.csv")
+write_csv(test_data, file = "data/test.csv")
 
