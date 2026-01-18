@@ -1,85 +1,162 @@
+rm(list = ls())
+
 library(tidyverse)
+library(fastDummies)
 
-setwd("~/module-3/group-project/")
+set.seed(67)
 
-patients <- read.csv(file = "data/patients_table.csv")
+######## PREPARATION #########
 
-admissions <- read.csv(file = "data/patient_admissions.csv")
+# Read Data Files
+patients <- read.csv(file = "data/patients_table.csv") %>% select(-X)
 
-cat_cols <- c("race", "admission_type",
-              "insurance", "language", "marital_status")
+admissions <- read.csv(file = "data/patient_admissions.csv") %>% select(-X)
 
-merged <- admissions %>%
-  left_join(patients %>% select(subject_id, gender, anchor_year, anchor_age, dod),
-            by = "subject_id") %>%
-  mutate(nonenglish = case_when(
-              language == "English" ~ 0,
-              language != "English" ~ 1),
-         gender = case_when(
-           gender == "M" ~ 0,
-           gender == "F" ~ 1),
-         dod = ymd(dod), # date of death if applicable
-         deathtime = ymd_hms(deathtime), # death time 
-         admittime = ymd_hms(admittime),
-         dischtime = ymd_hms(dischtime),
-         LoS  = as.numeric(dischtime - admittime, units = "days"), # Hospital Length of Stay in DAYS
-         edregtime = ymd_hms(edregtime),
-         edouttime = ymd_hms(edouttime),
-         LoS_ER  = as.numeric(edouttime - edregtime, units = "hours"), # ER Length of Stay in HOURS
-         LoS_ER = ifelse(is.na(LoS_ER), 0, LoS_ER),
-         current_age = year(admittime) - anchor_year + anchor_age) %>% # Age of patient at admission
-  group_by(subject_id) %>%
-  arrange(admittime, .by_group = TRUE) %>%
-  mutate(admission_no = row_number()) %>% # Create admission number
-  ungroup() %>%
-  mutate(across(all_of(cat_cols), ~ replace_na(as.character(.), "Unknown"))) %>%
-  mutate(across(all_of(cat_cols), as.factor)) %>%
-  select(subject_id, hadm_id, admission_no, 
-         LoS, LoS_ER, hospital_expire_flag, 
-         deathtime, dod, current_age, gender, 
-         race, admission_type, insurance, nonenglish, marital_status)
+diagnoses <- read.csv(file = "data/grouped_diagnosis_byCSS.csv") 
 
-pca <- merged %>%
-  select(LoS, LoS_ER, nonenglish, current_age, hospital_expire_flag, gender) %>%
-  prcomp(center = T, scale = T)
+######## INITIAL MERGING AND CLEANING #########
 
-pca_df <- pca %>%
-  broom::augment(merged)
+# Constructing a Long Merged Dataframe 
+long <- admissions %>% # Start with Admissions
+  left_join(patients , by = "subject_id")
 
-pca_rotations <- pca$rotation %>% 
-  as.data.frame() %>% select(PC1, PC2) %>%
-  rownames_to_column(var = "features")
+# Fixing Empty Records and Merging Unknowns
+categories <- c( # Categorical Features
+  "race", "admission_type", "admission_location", "discharge_location",
+  "insurance", "language", "marital_status")
 
-plot.pca <- pca_df %>%
-  ggplot(aes(x = .fittedPC1, y = .fittedPC2, color = gender)) +
-  geom_point(alpha = 0.3, show.legend = F) +
-  labs(title = "PCA Plot",
-       x = "PC1",
-       y = "PC2")
+unknowns <- c( # Unknown types
+  "", NA, "unknown", "unable to obtain", "other facility") 
 
-plot.pca +
-  geom_segment(
-    inherit.aes = F,
-    data = pca_rotations,
-    aes(x = 0, y = 0, xend = PC1 * 5, yend = PC2 * 5)) +
-  geom_text(
-    inherit.aes = F,
-    data = pca_rotations,
-    aes(label = features,
-        x = PC1 * 5, y = PC2 * 5)
+long <- long %>%
+  mutate(across(all_of(categories), 
+                ~ if_else(is.na(.) | tolower(.) %in% unknowns,
+                          paste0("Unknown_", cur_column()),.))) %>%
+  mutate(deathtime = ifelse("", NA, ymd_hms(deathtime)),
+         dod = ifelse("", NA, ymd(dod)))
+
+diagnoses <- diagnoses %>%
+  mutate(ccs_code = case_when(
+    ccs_code == "" ~ "Unknown_CCS",
+    TRUE ~ ccs_code
+    )
   )
 
-merged %>% 
-  filter(LoS > 7) %>%
-  ggplot(aes(x = LoS, fill = as.factor(insurance))) +
-  geom_density(alpha = 0.7) +
-  theme_bw()
+# Setting up Categorical Features
+long <- long %>% # Setting Gender as Numeric
+  mutate(gender = case_when(
+    gender == "M" ~ 0,
+    gender == "F" ~ 1
+  ))
 
-merged %>%
-  ggplot(aes(x = current_age, y = hospital_expire_flag)) +
-  geom_point()
+# Parsing time data in lubridate
+dates <- c( # Date type Features
+  "admittime", "dischtime", "deathtime", "dod", 
+  "anchor_year", "edregtime", "edouttime"
+)
 
-print(pca)
+long <- long %>%
+  mutate(across(all_of(dates),
+      ~ parse_date_time(trimws(.),
+      orders = c("Y", "ymd", "ymd HMS"), exact = FALSE)))
 
-write_csv(merged, file = "data/cleaned.csv")
+######## FEATURE ENGINEERING #########
+
+# Reducing Cardinality of Categorical Features
+bin_rare_categories <- function(df, cols, threshold = 0.01) {
+  n <- nrow(df)
+  
+  for (col in cols) {
+    freq_table <- table(df[[col]])
+    rare_levels <- names(freq_table[freq_table < threshold * n])
+    
+    df[[col]] <- ifelse(df[[col]] %in% rare_levels, paste0("Other_",col), as.character(df[[col]]))
+  }
+  
+  return(df)
+}
+
+threshold <- 0.01  # 1%
+long <- bin_rare_categories(long, categories, threshold)
+
+# Calculating Patient's Current Age
+long <- long %>%
+  mutate(age = anchor_year - year(admittime) + anchor_age)
+
+# Calculating Admissions Length of Stay Features
+long <- long %>%
+  mutate(LoS = # in-hospital LoS in DAYS
+           as.numeric(dischtime - admittime, units = "days")) %>%
+  mutate(ER_LoS = # ER LoS in HOURS
+           case_when(
+             is.na(edregtime) ~ NA,
+             TRUE ~ as.numeric(edouttime - edregtime, units = "days")
+           )
+         )
+
+# Calculating Patient Admission Features
+long <- long %>%
+  group_by(subject_id) %>%
+  arrange(admittime, .by_group = TRUE) %>%
+  mutate(admission_no = row_number(), # Create admission number
+  days_since_discharge = # Days since discharged
+    as.numeric(admittime - lag(dischtime), unit = "days") 
+  ) %>%
+  ungroup()
+
+# Calculating Days until Death
+long <- long %>%
+  mutate(
+    days_until_death = case_when(
+      !is.na(dod)        ~ as.numeric(dod - admittime, unit = "days"),
+      !is.na(deathtime)  ~ as.numeric(deathtime - admittime, unit = "days"),
+      TRUE               ~ NA_real_
+    )
+  )
+
+######## EMBEDDING CCS CODES #########
+
+# Assigning ccs codes to integers
+ccs_levels <- sort(unique(diagnoses$ccs_code))
+diagnoses$ccs_index <- as.integer(factor(diagnoses$ccs_code, levels = ccs_levels)) - 1
+
+# Initialize random embedding matrix
+num_codes <- length(ccs_levels)
+embedding_dim <- 30
+#set.seed(67)
+embedding_matrix <- matrix(runif(num_codes * embedding_dim, -0.1, 0.1),
+                           nrow = num_codes, ncol = embedding_dim)
+rownames(embedding_matrix) <- ccs_levels
+
+# Creating Embedded CCS codes
+ccs_embeddings <- diagnoses %>%
+  group_by(hadm_id) %>%  # one group per admission
+  summarise(
+    embedding = list(colMeans(embedding_matrix[as.character(ccs_code), , drop = FALSE])),
+    .groups = "drop"
+  ) %>%
+  unnest_wider(embedding, names_sep = "_") %>%
+  rename_with(~ paste0("ccs_emb_", seq_along(.)), -hadm_id)
+
+######## PIVOTING LONG TO WIDE  #########
+
+# Create multi-hot / one-hot encoded columns
+wide <- long %>%
+  dummy_cols(select_columns = categories, 
+             remove_selected = TRUE,  # Remove original categorical columns
+             remove_first_dummy = FALSE)  # Keep all categories
+
+# Incorporating CCS embeddings
+wide <- wide %>%
+  right_join(ccs_embeddings, by = "hadm_id")
+
+
+# Initial Feature Selection
+features_to_remove <- c(
+  "subject_id", "admittime", "dischtime", "edregtime", "edouttime", "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id"
+)
+wide <- wide %>% select(-all_of(features_to_remove))
+
+
+write_csv(wide, file = "data/wide.csv")
 
