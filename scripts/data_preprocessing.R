@@ -31,18 +31,7 @@ long <- long %>%
       TRUE ~ dod))
 
 categories <- c(
-  "race", "admission_type", "admission_location", "discharge_location",
-  "insurance", "language", "marital_status"
-)
-
-unknowns <- c(
-  "unknown", "unable to obtain", "other"
-)
-
-pattern <- paste0("\\b(", paste(unknowns, collapse = "|"), ")\\b")
-
-categories <- c(
-  "race", "admission_type", "admission_location", "discharge_location",
+  "race", "admission_type", "admission_location", # Do not include discharge loc
   "insurance", "language", "marital_status"
 )
 
@@ -190,8 +179,9 @@ wide <- wide %>%
 
 # Removing Features
 features_to_remove <- c(
-  "admittime", "dischtime", "edregtime", "edouttime", "deathtime",
-  "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id", "dod"
+  "admittime", "dischtime", "edregtime", "edouttime", 
+  "deathtime", "anchor_age", "anchor_year_group", 
+  "anchor_year", "admit_provider_id", "dod", "discharge_location"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
 
