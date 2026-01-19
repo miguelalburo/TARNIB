@@ -159,18 +159,26 @@ wide <- wide %>%
 
 # Removing Features
 features_to_remove <- c(
-  "subject_id", "admittime", "dischtime", "edregtime", "edouttime",
+  "admittime", "dischtime", "edregtime", "edouttime",
   "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id", "dod"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
 
-# Stratified 80/20 RAIN/TEST based on hospital_expire_flag
-n <- nrow(wide)
-train_idx <- createDataPartition(wide$hospital_expire_flag, p = 0.8, list = FALSE)
-train_data <- wide[train_idx, ]
-test_data  <- wide[-train_idx, ]
+# One row per patient with label
+patient_labels <- wide %>%
+  group_by(subject_id) %>%
+  summarise(hospital_expire_flag = max(hospital_expire_flag), .groups = "drop")
+
+# Stratified patient split
+train_patients <- patient_labels %>%
+  group_by(hospital_expire_flag) %>%
+  sample_frac(0.8) %>%
+  pull(subject_id)
+
+# Performing Split
+train <- wide %>% filter(subject_id %in% train_patients)
+test  <- wide %>% filter(!subject_id %in% train_patients)
 
 # Writing to CSV file
-write_csv(train_data, file = "data/train.csv")
-write_csv(test_data, file = "data/test.csv")
-
+write_csv(train, file = "data/train.csv")
+write_csv(test, file = "data/test.csv")
