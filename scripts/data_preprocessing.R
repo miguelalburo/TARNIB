@@ -22,23 +22,51 @@ long <- admissions %>% # Start with Admissions
   left_join(patients , by = "subject_id")
 
 # Fixing Empty Records and Merging Unknowns
-categories <- c( # Categorical Features
-  "race", "admission_type", "admission_location", "discharge_location",
-  "insurance", "language", "marital_status")
-
-unknowns <- c( # Unknown types
-  "", NA, "unknown", "unable to obtain", "other facility") 
-
 long <- long %>%
-  mutate(across(all_of(categories), 
-                ~ if_else(is.na(.) | tolower(.) %in% unknowns,
-                          paste0("Unknown_", cur_column()),.))) %>%
   mutate(deathtime = case_when(
-             deathtime == "" ~ NA,
-             TRUE ~ deathtime),
-         dod = case_when(
-             dod == "" ~ NA,
-             TRUE ~ dod))
+    deathtime == "" ~ NA,
+    TRUE ~ deathtime),
+    dod = case_when(
+      dod == "" ~ NA,
+      TRUE ~ dod))
+
+categories <- c(
+  "race", "admission_type", "admission_location", "discharge_location",
+  "insurance", "language", "marital_status"
+)
+
+unknowns <- c(
+  "unknown", "unable to obtain", "other"
+)
+
+pattern <- paste0("\\b(", paste(unknowns, collapse = "|"), ")\\b")
+
+categories <- c(
+  "race", "admission_type", "admission_location", "discharge_location",
+  "insurance", "language", "marital_status"
+)
+
+unknowns <- c(
+  "unknown", "unable to obtain", "other"
+)
+
+pattern <- paste0("\\b(", paste(unknowns, collapse = "|"), ")\\b")
+
+for (col in categories) {
+  
+  x <- as.character(long[[col]])
+  
+  idx_unknown <- grepl(pattern, tolower(trimws(x)))
+  idx_empty   <- trimws(x) == ""
+  idx_na      <- is.na(x)
+  
+  # Replace all unknown/empty/NA with "Unknown/Other"
+  x[idx_unknown | idx_empty | idx_na] <- "Unknown/Other"
+  
+  # Put it back into the data frame
+  long[[col]] <- x
+}
+
 
 diagnoses <- diagnoses %>%
   mutate(ccs_code = case_when(
@@ -67,6 +95,9 @@ long <- long %>%
 
 ######## FEATURE ENGINEERING #########
 
+# Removing discharge location as it provides immediate data leakage
+long <- long
+
 # Reducing Cardinality of Categorical Features
 bin_rare_categories <- function(df, cols, threshold = 0.01) {
   n <- nrow(df)
@@ -75,7 +106,7 @@ bin_rare_categories <- function(df, cols, threshold = 0.01) {
     freq_table <- table(df[[col]])
     rare_levels <- names(freq_table[freq_table < threshold * n])
     
-    df[[col]] <- ifelse(df[[col]] %in% rare_levels, paste0("Other_",col), as.character(df[[col]]))
+    df[[col]] <- ifelse(df[[col]] %in% rare_levels, "Unknown/Other", as.character(df[[col]]))
   }
   
   return(df)
@@ -159,7 +190,7 @@ wide <- wide %>%
 
 # Removing Features
 features_to_remove <- c(
-  "admittime", "dischtime", "edregtime", "edouttime",
+  "admittime", "dischtime", "edregtime", "edouttime", "deathtime",
   "anchor_age", "anchor_year_group", "anchor_year", "admit_provider_id", "dod"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
