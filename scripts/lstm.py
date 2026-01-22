@@ -361,11 +361,6 @@ model.load_state_dict(torch.load("best_lstm_mortality.pt", map_location=device))
 final_metrics = eval_loader(test_loader)
 final_metrics
 
-# Cell 16 — Ethnicity/race-wise performance table (Objective #3)
-# Computes race wise evaluation metrics on the test set and displays the first 20 rows
-race_table = eval_by_race(test_loader)
-race_table.head(20)
-
 # Cell 17 — Save scaler + feature columns (for reproducibility)
 # joblib library to efficiently save and load Python objects
 import joblib
@@ -731,3 +726,15 @@ feature_importance_los = permutation_importance_lstm_regression(
 )
 
 feature_importance_los.head(15)
+
+# Cell 31 — Ethnicity/race-wise performance table (Objective #3)
+# Computes race wise evaluation metrics on the test set and displays the first 20 rows
+
+race_table = eval_by_race(test_loader)
+race_table.head(20)
+
+# Cell 32 — Ethnicity/race-wise performance table for LoS (Objective #3)
+# Computes race wise regression metrics for LoS prediction on the test set
+
+los_race_table = eval_los_by_race(test_los_loader)
+los_race_table.head(20)
