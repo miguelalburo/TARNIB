@@ -171,6 +171,12 @@ wide <- long %>%
              remove_selected = TRUE,  # Remove original categorical columns
              remove_first_dummy = FALSE)  # Keep all categories
 
+# With  CCS intact (FOR XGBOOST)
+ultrawide <- long %>%
+  dummy_cols(select_columns = c(categories, "ccs_code"),
+             remove_selected = TRUE,  # Remove original categorical columns
+             remove_first_dummy = FALSE)  # Keep all categories
+
 # Incorporating CCS embeddings
 wide <- wide %>%
   right_join(ccs_embeddings, by = "hadm_id")
@@ -179,8 +185,8 @@ wide <- wide %>%
 
 # Removing Features
 features_to_remove <- c(
-  "admittime", "dischtime", "edregtime", "edouttime", 
-  "deathtime", "anchor_age", "anchor_year_group", 
+  "admittime", "dischtime", "edregtime", "edouttime",
+  "deathtime", "anchor_age", "anchor_year_group",
   "anchor_year", "admit_provider_id", "dod", "discharge_location"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
@@ -199,7 +205,11 @@ train_patients <- patient_labels %>%
 # Performing Split
 train <- wide %>% filter(subject_id %in% train_patients)
 test  <- wide %>% filter(!subject_id %in% train_patients)
+train_wide <- ultrawide %>% filter(subject_id %in% train_patients)
+test_wide <- ultrawide %>% filter(!subject_id %in% train_patients)
 
 # Writing to CSV file
 write_csv(train, file = "data/train.csv")
 write_csv(test, file = "data/test.csv")
+write_csv(train_wide, file = "data/train_wide.csv")
+write_csv(test_wide, file = "data/test_wide.csv")
