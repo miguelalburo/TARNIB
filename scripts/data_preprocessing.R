@@ -171,11 +171,17 @@ wide <- long %>%
              remove_selected = TRUE,  # Remove original categorical columns
              remove_first_dummy = FALSE)  # Keep all categories
 
-# With  CCS intact (FOR XGBOOST)
-ultrawide <- long %>%
-  dummy_cols(select_columns = c(categories, "ccs_code"),
-             remove_selected = TRUE,  # Remove original categorical columns
-             remove_first_dummy = FALSE)  # Keep all categories
+# With CCS intact (FOR XGBOOST)
+ultrawide <- diagnoses %>%
+  pivot_wider(
+    id_cols = hadm_id,
+    names_from = ccs_code,
+    values_from = ccs_code,
+    values_fn = list(ccs_code = length),
+    values_fill = 0
+  ) %>%
+  left_join(wide, by = "hadm_id")
+
 
 # Incorporating CCS embeddings
 wide <- wide %>%
@@ -190,6 +196,7 @@ features_to_remove <- c(
   "anchor_year", "admit_provider_id", "dod", "discharge_location"
 )
 wide <- wide %>% select(-all_of(features_to_remove))
+ultrawide <- ultrawide %>% select(-all_of(features_to_remove))
 
 # One row per patient with label
 patient_labels <- wide %>%
