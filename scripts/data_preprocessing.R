@@ -117,7 +117,14 @@ long <- long %>%
              is.na(edregtime) ~ NA,
              TRUE ~ as.numeric(edouttime - edregtime, units = "days")
            )
-         )
+         ) %>%
+  mutate(LoS = case_when(
+    LoS < 0 ~ 0,
+    TRUE ~ LoS
+  ), ER_LoS = case_when(
+    ER_LoS < 0 ~ NA,
+    TRUE ~ ER_LoS
+  ))
 
 # Calculating Patient Admission Features
 long <- long %>%
