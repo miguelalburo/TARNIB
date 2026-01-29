@@ -1,5 +1,7 @@
 rm(list = ls())
 
+# setwd(..) # Working directory is the relative parent directory
+
 library(tidyverse)
 library(fastDummies)
 library(caret)
@@ -82,12 +84,28 @@ long <- long %>%
       ~ parse_date_time(trimws(.),
       orders = c("Y", "ymd", "ymd HMS"), exact = FALSE)))
 
+
+# Fixing race column
+
+
+
 ######## FEATURE ENGINEERING #########
 
-# Removing discharge location as it provides immediate data leakage
-long <- long
-
 # Reducing Cardinality of Categorical Features
+long <- long %>%
+  mutate(
+    race = case_when(
+      str_detect(race, regex("White", ignore_case = TRUE)) ~ "White",
+      str_detect(race, regex("Black", ignore_case = TRUE)) ~ "Black",
+      str_detect(race, regex("Asian", ignore_case = TRUE)) ~ "Asian",
+      str_detect(race, regex("Hispanic", ignore_case = TRUE)) ~ "Hispanic",
+      TRUE ~ race
+    )
+  ) %>%
+  mutate(language = case_when(
+    language == "English" ~ 1,
+    TRUE ~ 0))
+
 bin_rare_categories <- function(df, cols, threshold = 0.01) {
   n <- nrow(df)
   
@@ -227,3 +245,4 @@ write_csv(train, file = "data/train.csv")
 write_csv(test, file = "data/test.csv")
 write_csv(train_wide, file = "data/train_wide.csv")
 write_csv(test_wide, file = "data/test_wide.csv")
+write_csv(long, file = "data/merged.csv")
