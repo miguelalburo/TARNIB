@@ -6,7 +6,11 @@ We are the *Team for Advanced Research in Neural Inference for Biostatistics* a.
 
 ## Data Preprocessing Pipeline 
 
-```{mermaid}
+```mermaid
+---
+config:
+  theme: dark
+---
 flowchart TB
 
     diagnoses["Diagnoses Data"]
