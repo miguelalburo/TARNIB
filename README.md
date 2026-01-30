@@ -6,6 +6,7 @@ We are the *Team for Advanced Research in Neural Inference for Biostatistics* a.
 
 ## Data Preprocessing Pipeline 
 
+```{mermaid}
 flowchart TB
 
     diagnoses["Diagnoses Data"]
@@ -30,7 +31,7 @@ flowchart TB
     
 
     classDef empty width:1px,height:1px,fill:transparent,stroke:transparent;
-
+```
 ## 👥 TARNIB Members
 
 - Abd Alhalem Abboud
