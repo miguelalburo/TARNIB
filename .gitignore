@@ -1,2 +1,3 @@
 .ipynb_checkpoints
 .venv
+scripts/llm_model/*
